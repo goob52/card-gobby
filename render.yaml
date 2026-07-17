@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: card-goblin
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true

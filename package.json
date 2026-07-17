@@ -1,0 +1,19 @@
+{
+  "name": "card-goblin-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-based online multiplayer Card Goblin game.",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5"
+  }
+}
