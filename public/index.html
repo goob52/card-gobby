@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Card Goblin Online</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,.18), transparent 20%),
+        linear-gradient(135deg, #1c2638, #05070d);
+      color: white;
+      padding: 12px;
+    }
+    button, input {
+      border: 0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    button { cursor: pointer; }
+    input {
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.14);
+      color: white;
+      width: 100%;
+      text-transform: uppercase;
+    }
+    .menu {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #111827, #020617 72%);
+      padding: 18px;
+    }
+    .menu.hidden { display: none; }
+    .menu-card {
+      width: min(560px, 100%);
+      background: rgba(8,8,12,.96);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+    }
+    h1 { margin: 0; font-size: 38px; }
+    .muted { color: rgba(255,255,255,.70); line-height: 1.45; font-size: 14px; }
+    .menu-grid, .controls {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .two { grid-template-columns: 1fr 1fr; }
+    .primary { background: #ffd166; color: #111; }
+    .plain { background: white; color: #111; }
+    .dark { background: rgba(255,255,255,.12); color: white; }
+    .top {
+      display: grid;
+      grid-template-columns: 280px 1fr 350px;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .panel {
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.13);
+      background: rgba(255,255,255,.075);
+      padding: 12px;
+    }
+    .score-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .scorebox {
+      border-radius: 16px;
+      padding: 9px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.075);
+    }
+    .score-label { color: rgba(255,255,255,.70); font-size: 12px; font-weight: 900; }
+    .score { font-size: 30px; font-weight: 900; line-height: 1; }
+    .roundline {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      opacity: .8;
+      margin-bottom: 8px;
+    }
+    .status { min-height: 52px; line-height: 1.35; color: rgba(255,255,255,.86); }
+    .board {
+      display: grid;
+      grid-template-rows: auto 132px auto;
+      gap: 10px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+    .opp { background: rgba(239,68,68,.15); border-color: rgba(252,165,165,.32); }
+    .you { background: rgba(59,130,246,.15); border-color: rgba(147,197,253,.32); }
+    .side-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .side-label {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      opacity: .78;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(13, minmax(42px, 1fr));
+      grid-template-rows: repeat(2, 58px);
+      gap: 7px;
+    }
+    .card {
+      height: 58px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,.34);
+      background: rgba(3,3,6,.92);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-weight: 900;
+      min-width: 0;
+      user-select: none;
+      transition: transform .08s, box-shadow .08s;
+    }
+    .card:hover, .card.hovered {
+      transform: scale(1.04);
+      box-shadow: 0 0 0 4px rgba(103,232,249,.68);
+    }
+    /* Target highlight intentionally disabled for memory/reaction gameplay. */
+    .card.selected { box-shadow: 0 0 0 4px rgba(134,239,172,.85); }
+    .empty {
+      opacity: .12;
+      border-style: dashed;
+      border-radius: 3px;
+      background: rgba(255,255,255,.045);
+    }
+    .empty:hover { transform: none; box-shadow: none; }
+    .rank { font-size: 19px; line-height: 18px; }
+    .suit { font-size: 23px; line-height: 22px; }
+    .red { color: #fb7185; }
+    .black { color: #f4f4f5; }
+    .cutline-zone {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 0 12px;
+    }
+    .cutline {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow: hidden;
+    }
+    .barfill {
+      height: 100%;
+      width: 0%;
+      background: #fbbf24;
+      transition: width .2s;
+    }
+    .barfill.up { width: 50%; background: #fbbf24; }
+    .barfill.down { width: 100%; background: #86efac; }
+    .callbox {
+      min-width: 250px;
+      min-height: 100px;
+      max-width: 340px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(30px, 5vw, 78px);
+      font-weight: 900;
+      line-height: .95;
+      text-align: center;
+      padding: 10px 14px;
+      word-break: break-word;
+      box-shadow: 0 0 22px rgba(0,0,0,.35);
+    }
+    .cut-label {
+      text-align: center;
+      margin-top: 6px;
+      opacity: .75;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .meld-block {
+      width: min(240px, 100%);
+      margin: 10px auto 0;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      text-align: center;
+      font-weight: 900;
+      user-select: none;
+    }
+    .meld-block:hover, .meld-block.hovered {
+      box-shadow: 0 0 0 4px rgba(103,232,249,.55);
+      background: rgba(255,255,255,.14);
+    }
+    .tiny { font-size: 11px; color: rgba(255,255,255,.65); margin-top: 4px; }
+
+    .opponent-cursor {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 15;
+      pointer-events: none;
+      display: none;
+      transform: translate(-4px, -4px);
+      filter: drop-shadow(0 0 7px rgba(255,120,120,.95));
+    }
+
+    .opponent-cursor .cursor-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ff4d6d;
+      border: 2px solid white;
+    }
+
+    .opponent-cursor .cursor-label {
+      position: absolute;
+      left: 18px;
+      top: -8px;
+      background: rgba(0,0,0,.80);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    @media (max-width: 1000px) {
+      .top { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: repeat(13, minmax(36px, 1fr)); gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="opponent-cursor" id="opponentCursor">
+    <div class="cursor-dot"></div>
+    <div class="cursor-label">OPP</div>
+  </div>
+
+  <div class="menu" id="menu">
+    <div class="menu-card">
+      <h1>Card Goblin Online</h1>
+      <p class="muted">
+        Online room-code MVP. One player creates a room, the other joins the code.
+        Each player sees their own cards at the bottom/front. Server decides first valid action.
+      </p>
+      <div class="menu-grid">
+        <button class="primary" id="createBtn">Create Room</button>
+        <div class="two menu-grid">
+          <input id="joinCode" placeholder="ROOM CODE">
+          <button class="plain" id="joinBtn">Join Room</button>
+        </div>
+        <div class="muted" id="menuMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="top">
+    <div class="panel">
+      <h1>Card Goblin</h1>
+      <div class="muted" id="whoText">Not connected</div>
+      <div class="score-row">
+        <div class="scorebox">
+          <div class="score-label">You</div>
+          <div class="score" id="yourScore">0</div>
+        </div>
+        <div class="scorebox">
+          <div class="score-label">Opponent</div>
+          <div class="score" id="oppScore">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="roundline" id="roundLine">Round 0 · Waiting</div>
+      <div class="status" id="status">Create or join a room.</div>
+    </div>
+
+    <div class="panel">
+      <div class="controls two">
+        <button class="primary" id="startRoundBtn">Start Round</button>
+        <button class="plain" id="skipSwapBtn">Skip Swap</button>
+        <button class="dark" id="redealBtn">Redeal</button>
+        <button class="dark" id="copyCodeBtn">Copy Code</button>
+        <button class="dark" id="leaveRoomBtn">Leave Room</button>
+      </div>
+      <p class="muted">
+        Each player sees their own side at the bottom/front. Cards are auto-grouped by rank for melds.
+        10% of rounds are troll/fake calls with no target card.
+        Cards do not light up; you have to remember and react.
+        You can see the other player's cursor as a red marker.
+        Left click = capture. Right click = block. Hover called card + press 1 three times = meld.
+        Hover meld block + press 1 three times = meld block.
+      </p>
+    </div>
+  </div>
+
+  <div class="board">
+    <section class="panel opp">
+      <div class="side-label">Opponent side</div>
+      <div class="side-title">
+        <h2 id="oppTitle">Opponent</h2>
+        <span class="muted" id="oppConn">Waiting</span>
+      </div>
+      <div class="cards" id="oppCards"></div>
+    </section>
+
+    <section class="cutline-zone">
+      <div class="cutline"><div class="barfill" id="barLeft"></div></div>
+      <div>
+        <div class="callbox" id="callBox">CHUD FART</div>
+        <div class="cut-label" id="cutLabel">Waiting</div>
+      </div>
+      <div class="cutline"><div class="barfill" id="barRight"></div></div>
+    </section>
+
+    <section class="panel you">
+      <div class="side-title">
+        <h2 id="youTitle">You</h2>
+        <span class="muted" id="youConn">Offline</span>
+      </div>
+      <div class="cards" id="yourCards"></div>
+      <div class="meld-block" id="meldBlock">
+        MELD BLOCK
+        <div class="tiny">hover + press 1 three times</div>
+      </div>
+      <div class="side-label">Your side</div>
+    </section>
+  </div>
+
+  <audio id="sfxCapture" src="/assets/capture.mp3"></audio>
+  <audio id="sfxBlock" src="/assets/block.mp3"></audio>
+  <audio id="sfxMeld" src="/assets/meld.mp3"></audio>
+  <audio id="sfxMeldBlock" src="/assets/meld-block.mp3"></audio>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    let myPlayer = 0;
+    let roomCode = "";
+    let state = null;
+    let hoveredCardId = null;
+    let hoveredSpecial = null;
+    let lastCursorSend = 0;
+
+    const els = {
+      menu: document.getElementById("menu"),
+      menuMsg: document.getElementById("menuMsg"),
+      createBtn: document.getElementById("createBtn"),
+      joinBtn: document.getElementById("joinBtn"),
+      joinCode: document.getElementById("joinCode"),
+      whoText: document.getElementById("whoText"),
+      yourScore: document.getElementById("yourScore"),
+      oppScore: document.getElementById("oppScore"),
+      roundLine: document.getElementById("roundLine"),
+      status: document.getElementById("status"),
+      startRoundBtn: document.getElementById("startRoundBtn"),
+      skipSwapBtn: document.getElementById("skipSwapBtn"),
+      redealBtn: document.getElementById("redealBtn"),
+      copyCodeBtn: document.getElementById("copyCodeBtn"),
+      leaveRoomBtn: document.getElementById("leaveRoomBtn"),
+      oppCards: document.getElementById("oppCards"),
+      yourCards: document.getElementById("yourCards"),
+      callBox: document.getElementById("callBox"),
+      cutLabel: document.getElementById("cutLabel"),
+      barLeft: document.getElementById("barLeft"),
+      barRight: document.getElementById("barRight"),
+      meldBlock: document.getElementById("meldBlock"),
+      youConn: document.getElementById("youConn"),
+      oppConn: document.getElementById("oppConn"),
+      sfxCapture: document.getElementById("sfxCapture"),
+      sfxBlock: document.getElementById("sfxBlock"),
+      sfxMeld: document.getElementById("sfxMeld"),
+      sfxMeldBlock: document.getElementById("sfxMeldBlock"),
+      opponentCursor: document.getElementById("opponentCursor")
+    };
+
+    function opponent() {
+      return myPlayer === 1 ? 2 : 1;
+    }
+
+    function playSfx(name) {
+      const map = {
+        capture: els.sfxCapture,
+        block: els.sfxBlock,
+        meld: els.sfxMeld,
+        "meld-block": els.sfxMeldBlock
+      };
+      const audio = map[name];
+      if (!audio) return;
+      audio.currentTime = 0;
+      audio.volume = 1;
+      audio.play().catch(() => {});
+    }
+
+    function cardHTML(card) {
+      // No target highlighting: the game is supposed to be memory + reaction.
+      const selected = state && state.swap && state.swap.selectedCardId === card.id;
+
+      const btn = document.createElement("button");
+      btn.className = "card";
+      if (selected) btn.classList.add("selected");
+      if (hoveredCardId === card.id) btn.classList.add("hovered");
+
+      btn.dataset.cardId = card.id;
+      btn.innerHTML = `<div class="rank ${card.color}">${card.rank}</div><div class="suit ${card.color}">${card.symbol}</div>`;
+
+      btn.addEventListener("mouseenter", () => {
+        hoveredSpecial = null;
+        hoveredCardId = card.id;
+        render();
+      });
+
+      btn.addEventListener("mouseleave", () => {
+        if (hoveredCardId === card.id) hoveredCardId = null;
+        render();
+      });
+
+      btn.addEventListener("contextmenu", event => event.preventDefault());
+
+      btn.addEventListener("pointerdown", event => {
+        event.preventDefault();
+
+        if (!state) return;
+
+        if (state.swap && state.swap.player === myPlayer) {
+          if (event.button === 0) socket.emit("swapPick", card.id);
+          return;
+        }
+
+        if (event.button === 0) socket.emit("action", { move: "capture", cardId: card.id });
+        if (event.button === 2) socket.emit("action", { move: "block", cardId: card.id });
+      });
+
+      return btn;
+    }
+
+    function emptySlot() {
+      const div = document.createElement("div");
+      div.className = "card empty";
+      return div;
+    }
+
+    function renderCards(player, container) {
+      container.innerHTML = "";
+      if (!state) return;
+
+      const active = state.cards.filter(card => card.owner === player && !card.removed);
+      const slotMap = new Map(active.map(card => [card.displaySlot, card]));
+
+      for (let i = 0; i < 26; i++) {
+        const card = slotMap.get(i);
+        container.appendChild(card ? cardHTML(card) : emptySlot());
+      }
+    }
+
+    function render() {
+      if (!state || !myPlayer) return;
+
+      const opp = opponent();
+      els.menu.classList.add("hidden");
+
+      els.whoText.textContent = `Room ${state.roomCode} · You are Player ${myPlayer}`;
+      els.youConn.textContent = myPlayer ? "Online" : "Spectator";
+      els.oppConn.textContent = state.players[`p${opp}Connected`] ? "Online" : "Waiting";
+
+      els.yourScore.textContent = state.score[myPlayer] || 0;
+      els.oppScore.textContent = state.score[opp] || 0;
+
+      let stageText = "Waiting";
+      if (state.swap) stageText = `Swap phase: Player ${state.swap.player}`;
+      else if (state.callStage === "first") stageText = "Chud Fart Up";
+      else if (state.callStage === "full") stageText = "Chud Fart Down";
+
+      els.roundLine.textContent = `Round ${state.round} · ${stageText}`;
+      els.status.textContent = state.message || "";
+
+      els.callBox.textContent = state.callView.text || "CHUD FART";
+      els.callBox.className = "callbox " + (state.callView.color || "");
+
+      els.cutLabel.textContent = stageText;
+      els.barLeft.className = "barfill" + (state.callStage === "first" ? " up" : state.callStage === "full" ? " down" : "");
+      els.barRight.className = "barfill" + (state.callStage === "first" ? " up" : state.callStage === "full" ? " down" : "");
+
+      els.skipSwapBtn.disabled = !(state.swap && state.swap.player === myPlayer);
+      els.startRoundBtn.disabled = !!state.swap || state.callStage !== "waiting";
+      els.redealBtn.disabled = myPlayer !== 1;
+
+      els.meldBlock.classList.toggle("hovered", hoveredSpecial === "meldBlock");
+
+      renderCards(opp, els.oppCards);
+      renderCards(myPlayer, els.yourCards);
+    }
+
+    els.createBtn.onclick = () => socket.emit("createRoom");
+    els.joinBtn.onclick = () => socket.emit("joinRoom", els.joinCode.value);
+    els.startRoundBtn.onclick = () => socket.emit("startRound");
+    els.skipSwapBtn.onclick = () => socket.emit("skipSwap");
+    els.redealBtn.onclick = () => socket.emit("redeal");
+
+    els.copyCodeBtn.onclick = async () => {
+      if (!roomCode) return;
+      try {
+        await navigator.clipboard.writeText(roomCode);
+        els.status.textContent = `Copied room code ${roomCode}`;
+      } catch {
+        els.status.textContent = `Room code: ${roomCode}`;
+      }
+    };
+
+    els.leaveRoomBtn.onclick = () => {
+      socket.emit("leaveRoom");
+      myPlayer = 0;
+      roomCode = "";
+      state = null;
+      hoveredCardId = null;
+      hoveredSpecial = null;
+      els.menu.classList.remove("hidden");
+      els.menuMsg.textContent = "Left room. Create or join another room.";
+      els.status.textContent = "Not connected.";
+      els.whoText.textContent = "Not connected";
+      if (els.opponentCursor) els.opponentCursor.style.display = "none";
+    };
+
+    els.meldBlock.addEventListener("mouseenter", () => {
+      hoveredSpecial = "meldBlock";
+      hoveredCardId = null;
+      render();
+    });
+
+    els.meldBlock.addEventListener("mouseleave", () => {
+      if (hoveredSpecial === "meldBlock") hoveredSpecial = null;
+      render();
+    });
+
+    document.addEventListener("pointermove", event => {
+      if (!myPlayer || !roomCode) return;
+
+      const now = Date.now();
+      if (now - lastCursorSend < 35) return;
+      lastCursorSend = now;
+
+      socket.emit("cursorMove", {
+        x: event.clientX / Math.max(1, window.innerWidth),
+        y: event.clientY / Math.max(1, window.innerHeight)
+      });
+    });
+
+    document.addEventListener("keydown", event => {
+      if (!state || !myPlayer) return;
+
+      if (event.key === " " && state.callStage === "waiting" && !state.swap) {
+        event.preventDefault();
+        socket.emit("startRound");
+      }
+
+      if (event.key === "1") {
+        event.preventDefault();
+        if (hoveredSpecial === "meldBlock") {
+          socket.emit("meldBlockInput");
+        } else if (hoveredCardId) {
+          socket.emit("meldInput", { cardId: hoveredCardId });
+        }
+      }
+
+      if (event.key.toLowerCase() === "s" && state.swap && state.swap.player === myPlayer) {
+        socket.emit("skipSwap");
+      }
+    });
+
+    socket.on("youAre", data => {
+      myPlayer = data.player;
+      roomCode = data.roomCode;
+    });
+
+    socket.on("state", next => {
+      state = next;
+      if (!roomCode) roomCode = next.roomCode;
+      render();
+    });
+
+    socket.on("personalMessage", text => {
+      els.status.textContent = text;
+    });
+
+    socket.on("errorMessage", text => {
+      els.menuMsg.textContent = text;
+    });
+
+    socket.on("opponentCursor", data => {
+      if (!els.opponentCursor || !data) return;
+
+      // Each player sees their own side on the bottom.
+      // Mirror the opponent's Y position so their bottom/front maps to your top/opponent side.
+      const x = Math.max(0, Math.min(1, Number(data.x) || 0));
+      const y = 1 - Math.max(0, Math.min(1, Number(data.y) || 0));
+
+      els.opponentCursor.style.display = "block";
+      els.opponentCursor.style.left = `${x * 100}vw`;
+      els.opponentCursor.style.top = `${y * 100}vh`;
+    });
+
+    socket.on("sfx", name => playSfx(name));
+  </script>
+</body>
+</html>
